@@ -9,50 +9,84 @@
 //
 
 #include <stdio.h>
+#include <stdexcept>
+#include <iostream>
 #include <array>
 
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_render.h>
 
-#include "../include/UI/Knob.h"
+#include "../include/Exceptions.h"
+#include "../include/UI/Window.h"
 
 using namespace Jam;
 
-using JamSubsysEventArray = std::array<JamEvent, 3>;
 
-// initializes subsystems used in project (e.g. SDL2, JUCE, Boost, etc.)
-JamSubsysEventArray init();
+// initializes shit used in project (e.g. SDL2, JUCE, Boost, etc.)
+void init();
 
-// closes subsystems specified by param
-void close( JamSubsysEventArray active );
+// closes subsystems specified successfully initialized, specified by params 
+void close();
 
 int main( int argc, char* args[] )
 {
-  JamSubsysEventArray resultCodes = init();
+  try 
+  {
+    init();
+  }
+  catch ( const SDLSubsystemException& e )
+  {
+    std::cerr << "SDL subsystem failed to initialize: " << e.what() << std::endl;
+    return -1;
+  }
+  catch ( const SDLImageSubsystemException& e )
+  {
+    std::cerr << "SDL image subsystem failed to initialize: " << e.what() << std::endl;
+    SDL_Quit();
+    return -1;
+  }
+  catch ( ... )
+  {
+    std::cerr << "Unknown error during subsys initialization." << std::endl;
+    return -1;
+  }
 
-  std::string path = "../assets/knob.png";
+  std::unique_ptr<JamUI::Window> window( nullptr );
 
-  SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
-  
-  std::shared_ptr<SDL_Window> window(
-    SDL_CreateWindow(
-      "JamCo!!!", 
-      SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 
-      640, 480,
-      SDL_WINDOW_SHOWN 
-    ), 
-    SDL_DestroyWindow
-  );
-
-  std::shared_ptr<SDL_Renderer> renderer( 
-    SDL_CreateRenderer( window.get(), -1, SDL_RENDERER_ACCELERATED ), 
-    SDL_DestroyRenderer 
-  );
-
-  SDL_Rect rect = { 100, 100, 100, 100 };
-
-  std::shared_ptr<JamUI::Knob> knob1( 
-   new JamUI::Knob( path, rect, window.get(), renderer.get() ) 
-  ); 
+  try 
+  {
+    window.reset( new JamUI::Window() );
+  } 
+  catch ( const WindowInitializationException& e ) 
+  {
+    std::cerr << "Window wrapper failed to initialize: " << e.what() << std::endl;
+    close();
+    return -1;
+  }
+  catch ( const FileNotFoundException& e )
+  {
+    std::cerr << "Asset path not found: " << e.what() << std::endl;
+    close();
+    return -1;
+  }
+  catch ( const TextureInitializationException& e )
+  {
+    std::cerr << "SDL issue occured when making texture: " << e.what() << std::endl;
+    close();
+    return -1;
+  }
+  catch ( const NullChildElementException& e )
+  {
+    std::cerr << e.what() << std::endl;
+    close();
+    return -1;
+  }
+  catch ( ... )
+  {
+    std::cerr << "Unknown runtime error occurred." << std::endl;
+    close();
+    return -1;
+  }
 
   SDL_Event e;
   bool quit = false;
@@ -69,60 +103,35 @@ int main( int argc, char* args[] )
       }
     }
 
-    SDL_RenderClear( renderer.get() );
-    SDL_RenderCopy( renderer.get(), knob1->getTexture(), NULL, NULL );
-    SDL_RenderPresent( renderer.get() );
+    SDL_RenderClear( window->getRenderer() );
+    window->render();
+    SDL_RenderPresent( window->getRenderer() );
   }
 
-  close( resultCodes );
+  close();
   
   return 0;
 }
 
-JamSubsysEventArray init()
+void init()
 {
-  JamSubsysEventArray result;
-
   if ( SDL_Init( SDL_INIT_VIDEO ) < 0 )
-  {
-    printf( "SDL could not initialize! SDL_Error: %s\n", SDL_GetError() );
-    if ( true ) // TODO
-      IMG_Init( IMG_INIT_PNG );
-    else
-      printf("fuck");
-  }
+    throw SDLSubsystemException( SDL_GetError() );
   else
-    result[0] = JamEvent::JAM_SDL_INIT;
+  {
+    if ( !( IMG_Init( IMG_INIT_PNG ) & IMG_INIT_PNG ) )
+      throw SDLImageSubsystemException( IMG_GetError() );
+  }
 
-  result[1] = JamEvent::JAM_INVALID_EVENT;
-  result[2] = JamEvent::JAM_INVALID_EVENT;
-
-  return result;
+  if ( !SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" ) )
+    std::cerr << "Warning: Linear texture filtering not enabled!\n";
 }
 
-void close( JamSubsysEventArray result )
+void close()
 {
-  for ( JamEvent e : result )
-  {
-    switch ( e )
-    {
-      case JamEvent::JAM_SDL_INIT:
-        SDL_Quit();
-        IMG_Quit();
-        puts("SDL QUIT");
-        break;
-
-      case JamEvent::JAM_JUCE_INIT:
-        puts("JUCE QUIT");
-        break;
-
-      case JamEvent::JAM_INVALID_EVENT:
-        puts("INVALID SUBSYS EVENT");
-        break;
-
-      default:
-        puts("Unrecognized type of subsystem event occurred.");
-    }
-  }
+  IMG_Quit();
+  puts( "SDL Image quit" );
+  SDL_Quit();
+  puts( "SDL quit" );
 }
 

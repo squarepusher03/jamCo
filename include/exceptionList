@@ -1,0 +1,10 @@
+FileNotFoundException
+NullChildElementException
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Initialization Exceptions
+TextureInitializationException
+WindowInitializationException
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Subsystem Exceptions
+SDLSubsystemException
+SDLImageSubsystemException

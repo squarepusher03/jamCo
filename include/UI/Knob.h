@@ -11,7 +11,7 @@ namespace Jam::JamUI
   class Knob : public Element
   {
   public:
-    Knob( std::string path, SDL_Rect clip, SDL_Window* window, SDL_Renderer* renderer );
+    Knob( std::string path, SDL_Rect shape, SDL_Renderer* renderer );
 
     void move( JamEvent e, SDL_Point dest ) override;
     void update( JamEvent e ) override;

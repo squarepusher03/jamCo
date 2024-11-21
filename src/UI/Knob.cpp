@@ -4,8 +4,8 @@
 
 namespace Jam::JamUI
 {
-  Knob::Knob( std::string path, SDL_Rect clip, SDL_Window* window, SDL_Renderer* renderer ) 
-    : Element( path, clip, window, renderer ) { m_clickable = true; }
+  Knob::Knob( std::string path, SDL_Rect shape, SDL_Renderer* renderer ) 
+    : Element( path, shape, renderer ) { m_clickable = true; }
 
   void Knob::move( Jam::JamEvent e, SDL_Point dest )
   {
